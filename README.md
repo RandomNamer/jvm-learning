@@ -3,7 +3,7 @@ Learn JVM intrinsics through a Chinese book "Deep Dive into Java VM". Focus main
 
 ## Part I. Java and JVM History 
 
-Brief History to Java
+- Brief History to Java
 
 - History and Future for JVM
 
