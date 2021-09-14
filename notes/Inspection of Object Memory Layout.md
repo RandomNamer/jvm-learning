@@ -28,7 +28,7 @@ static void printSampleClassLayout() {
 
 And it will output as follows:
 
-![image-20210914131219731](/Users/zzy/Documents/GitHub/jvm-learning/notes/images/mem-2.png)
+![image-20210914131219731](images/mem-5.png)
 
 We may find something familiar:
 
