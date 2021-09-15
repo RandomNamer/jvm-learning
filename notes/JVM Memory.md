@@ -84,6 +84,58 @@ HotSpot mainly uses the latter.
 ### OOMs
 
 - Heap OOM: Most common, possibly related to  memory leak
+
 - StackOverFlow
-- Method Area and Constant Pool: Method Area OOM can be triggered when new classes generated at runtime, like `Enhancer` in Spring framework. After Java 7, constant pool is moved to heap. We can no longer create constants (like Strings) to cause method area OOM.
-- 
+
+- Method Area and Constant Pool: Method Area OOM can be triggered when new classes generated at runtime, like `Enhancer` in Spring framework. After Java 7, constant pool is moved to heap. We can no longer create large amount of constants (like Strings) to cause method area OOM.
+
+- Direct Memory Overflow: We can use Unsafe to allocate direct memory:
+
+  ```java
+  Field unsafeField = Unsafe.class.getDeclaredFields()[0];
+  unsafeField.setAccessible(true);
+  Unsafe usf  = (Unsafe) unsafeField.get(null);
+  while(true){
+  	usf.allocateMemory(1*MB);
+  } 
+  ```
+
+## Garbage Collection
+
+### Judgement
+
+#### Reference Counting
+
+Attach a reference counter to object and when its value reduces to zero, the object will be considered ready for GC. It is the most straightforward GC approach, and use by some runtimes like COM and Python, but not for JVM. In some senario like cyclic referencing, basic reference counting easily fails. In some implementation like CPython, uses cycle detection algorithms to detect cyclic references and collect it.
+
+#### Reachability Analysis / Tracing
+
+Tracing GC is the most common GC approach in modern programming languages. it uses Reachability Analysis. All objects that can reach a GC Root will considered to be alive, and all objects that can't reach one root will be marked for collection.
+
+In Java, there are several GC Roots:
+
+- References in stack frames.
+- Static references in class. they resides in Method Area.
+- JNI references
+- References held by JVM itself, and classes which can't be GC-ed: Basic Types, ClassLoader, common errors (like `NullPointerException`).
+
+Some modern garbage collectors has a feature "Partial GC". In this circumstance, some references of other parts will be added to partial GC Roots.
+
+#### Reference Types
+
+After JDK 1.2, Java Added `java.lang.ref` package and 4 different types of Reference.
+
+- Strong Reference
+- Soft Reference
+- Weak Reference
+
+- Phantom Reference
+
+#### Death Sentence?
+
+After reachablility analysis, all unreachable object will be sentence to probationary death. If the object has override method `finalize()` , it will be put into a F-queue, and JVM will trigger `finalize()` in another thread. Later, garbage collector will scan these objects again, if one has re-established reference with GC Roots, it will not be collected.
+
+`finalize()` will only execute one time.
+
+<img src="images/mem-6.png" alt="image-20210915224609423" style="zoom:50%;" />
+
