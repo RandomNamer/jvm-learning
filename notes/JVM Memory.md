@@ -123,7 +123,7 @@ Some modern garbage collectors has a feature "Partial GC". In this circumstance,
 
 #### Reference Types
 
-After JDK 1.2, Java Added `java.lang.ref` package and 4 different types of Reference.
+After JDK 1.2, Java Added `java.lang.ref` package and 4 different types of Reference. 
 
 - Strong Reference
 - Soft Reference
@@ -138,4 +138,61 @@ After reachablility analysis, all unreachable object will be sentence to probati
 `finalize()` will only execute one time.
 
 <img src="images/mem-6.png" alt="image-20210915224609423" style="zoom:50%;" />
+
+#### GC in Method Area
+
+It's not necessary for JVMs to implement GC in method area. A class must satisfy these conditions to be unloaded:
+
+- All instances have been collected.
+- Its ClassLoader has been collected.
+- Its Class Type (`java.lang.Class`) has no reference, thus its methods can't be invoked by reflection.
+
+In normal circumstances, class unloading is not necessary, yet in softwares that heavily use dynamic proxy classes or other bytecode manipulation tools to generate classes at runtime, its needed for VM to have method area GC features.
+
+### GC Algorithms
+
+#### Generational Collection
+
+Generational GC is based on two principles:
+
+- Most of the objects perish quickly
+- Objects survive multiple GCs tend to be more durable.
+
+Thus collectors need to divide Java heap into generations by objects' age (survived GC counts). To each generation, VM can apply different GC algorithms, such as Mark-Copy, Mark-Compact, which will be introduced later.
+
+HotSpot divide heap into at least two generations: **old and young**. HotSpot has a framework to create even more generations and realize its specific behaviours. 
+
+Generational GC brings partial GC and full GC, and partial GC consists of these types:
+
+- **Minor GC:** targeting young generation
+- **Major GC:** targeting old generation
+- **Mixed GC: **collect young generation and part of old generation
+
+#### Mark-Sweep
+
+- Mark: Judge whether the object needs to be collected and mark the garbage.
+- Sweep: Collect all marked objects.
+
+Simple Mark-Sweep algorithm has two major vulnerabilities:
+
+-  In large heaps, Mark-Sweep lacks efficiency due to massive mark executions.
+- Simple Mark-Sweep will make the heap's memory to scatter, cause trouble to large object allocation.
+
+#### Mark-Copy
+
+Mark-Copy algorithms originated from Fenichel's Semispace-Copyiong in 1969. The notion is, slipt heap into two semispaces, use one at a time. If one semispace is depleted, all surviving objects will be copied to another semispace. Considering most of the object is dead when GC-ing, this has decent efficiency while maintaining memory in order.
+
+Modern JVMs use Mark-Copy to collect young generations. As mentioned before, most young generation objects die quickly, it will be divided into a big Eden space and two smaller Survivor space. At any time, VM will use Eden and one Survivor space, and when GC occurs, all remaining objects in Eden and one Survivor will be copied to another Survivor. By defualt, Eden is 8 times bigger than one Survivor, therefore 90% space is avaliable in Young Gen. 
+
+#### Mark-Compact
+
+When large propotion of objects will live through GC, Mark-Copy will lack efficiency due to massive amount of copying and waste of memory. Targeting old generation's characteristics, Mark-Compact algorithm is developed to collect effectively. 
+
+In Mark-Compact, after one run of collecting, all surviving objects will move forward, to form a compact memory layout again. This operation is venturous, moving massive amount of objects and updating their references accordingly, would require so called "Stop the World", that is, to stop the entire program while GC-ing.
+
+All these GC algorithms have defects respectively. moving objects will cause STW, copying objects will cause memory allocation overheads.
+
+The performance of GC is critical in some cases. Earlier Android Dalvik VM has a STW time of dozens miliseconds, and in mobile devices which memory is limited, GC is relatively frequent, caused Android devices stutter quite often. Later VM on Android, ART, implemented Concurrent Copy and Concurrent Mark-Sweeping GCs, reduced GC overhead to several miliseconds.
+
+### HotSpot GC internals
 
